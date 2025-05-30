@@ -1,132 +1,91 @@
 
-import React, { createContext, useContext, useState, useEffect } from 'react';
-
-interface User {
-  id: string;
-  name: string;
-  email: string;
-  role: 'admin' | 'student';
-}
+import React, { createContext, useContext, useEffect, useState } from 'react'
+import { supabase, getCurrentEstudiaUser, signOutUser, type EstudaiaUser } from '@/services/supabase'
+import type { Session } from '@supabase/supabase-js'
 
 interface AuthContextType {
-  user: User | null;
-  isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
-  logout: () => void;
-  register: (name: string, email: string, password: string, role?: 'student') => Promise<boolean>;
+  user: EstudaiaUser | null
+  session: Session | null
+  loading: boolean
+  signOut: () => Promise<void>
+  isAdmin: boolean
+  isStudent: boolean
+  refetchUser: () => Promise<void>
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
+export function useAuth() {
+  const context = useContext(AuthContext)
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error('useAuth must be used within an AuthProvider')
   }
-  return context;
-};
+  return context
+}
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<User | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<EstudaiaUser | null>(null)
+  const [session, setSession] = useState<Session | null>(null)
+  const [loading, setLoading] = useState(true)
+
+  const fetchUser = async () => {
+    try {
+      const estudaiaUser = await getCurrentEstudiaUser()
+      setUser(estudaiaUser)
+    } catch (error) {
+      console.error('Error fetching user:', error)
+      setUser(null)
+    }
+  }
 
   useEffect(() => {
-    const storedUser = localStorage.getItem('user');
-    if (storedUser) {
-      const userData = JSON.parse(storedUser);
-      setUser(userData);
-      setIsAuthenticated(true);
-    }
-  }, []);
-
-  const login = async (email: string, password: string): Promise<boolean> => {
-    try {
-      // Simulação de login - em um cenário real, isso seria uma chamada para API
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      
-      // Usuário admin padrão
-      if (email === 'admin@estuda.ia' && password === 'admin123') {
-        const adminUser: User = {
-          id: 'admin-1',
-          name: 'Administrador',
-          email: 'admin@estuda.ia',
-          role: 'admin'
-        };
-        setUser(adminUser);
-        setIsAuthenticated(true);
-        localStorage.setItem('user', JSON.stringify(adminUser));
-        return true;
+    // Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session)
+      if (session) {
+        fetchUser()
       }
+      setLoading(false)
+    })
 
-      // Verificar usuários registrados
-      const foundUser = users.find((u: any) => u.email === email && u.password === password);
-      if (foundUser) {
-        const userData: User = {
-          id: foundUser.id,
-          name: foundUser.name,
-          email: foundUser.email,
-          role: foundUser.role
-        };
-        setUser(userData);
-        setIsAuthenticated(true);
-        localStorage.setItem('user', JSON.stringify(userData));
-        return true;
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setSession(session)
+        if (session) {
+          await fetchUser()
+        } else {
+          setUser(null)
+        }
+        setLoading(false)
       }
+    )
 
-      return false;
-    } catch (error) {
-      console.error('Login error:', error);
-      return false;
-    }
-  };
+    return () => subscription.unsubscribe()
+  }, [])
 
-  const register = async (name: string, email: string, password: string, role: 'student' = 'student'): Promise<boolean> => {
-    try {
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      
-      // Verificar se o email já existe
-      if (users.find((u: any) => u.email === email)) {
-        return false;
-      }
+  const handleSignOut = async () => {
+    await signOutUser()
+    setUser(null)
+    setSession(null)
+  }
 
-      const newUser = {
-        id: Date.now().toString(),
-        name,
-        email,
-        password,
-        role
-      };
+  const isAdmin = user?.profile?.role === 'admin'
+  const isStudent = user?.profile?.role === 'student'
 
-      users.push(newUser);
-      localStorage.setItem('users', JSON.stringify(users));
-      
-      // Fazer login automaticamente após o registro
-      const userData: User = {
-        id: newUser.id,
-        name: newUser.name,
-        email: newUser.email,
-        role: newUser.role
-      };
-      setUser(userData);
-      setIsAuthenticated(true);
-      localStorage.setItem('user', JSON.stringify(userData));
-      
-      return true;
-    } catch (error) {
-      console.error('Register error:', error);
-      return false;
-    }
-  };
-
-  const logout = () => {
-    setUser(null);
-    setIsAuthenticated(false);
-    localStorage.removeItem('user');
-  };
+  const value = {
+    user,
+    session,
+    loading,
+    signOut: handleSignOut,
+    isAdmin,
+    isStudent,
+    refetchUser: fetchUser
+  }
 
   return (
-    <AuthContext.Provider value={{ user, isAuthenticated, login, logout, register }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
-  );
-};
+  )
+}
