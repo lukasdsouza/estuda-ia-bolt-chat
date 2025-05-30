@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { supabase, getCurrentEstudiaUser, signOutUser, type EstudaiaUser } from '@/services/supabase'
+import { supabase, getCurrentEstudiaUser, signOutUser, signInUser, signUpUser, type EstudaiaUser } from '@/services/supabase'
 import type { Session } from '@supabase/supabase-js'
 
 interface AuthContextType {
@@ -8,8 +8,12 @@ interface AuthContextType {
   session: Session | null
   loading: boolean
   signOut: () => Promise<void>
+  login: (email: string, password: string) => Promise<boolean>
+  register: (name: string, email: string, password: string) => Promise<boolean>
+  logout: () => Promise<void>
   isAdmin: boolean
   isStudent: boolean
+  isAuthenticated: boolean
   refetchUser: () => Promise<void>
 }
 
@@ -70,16 +74,49 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setSession(null)
   }
 
+  const handleLogin = async (email: string, password: string) => {
+    try {
+      const result = await signInUser(email, password)
+      if (result.user) {
+        await fetchUser()
+        return true
+      }
+      return false
+    } catch (error) {
+      console.error('Login error:', error)
+      return false
+    }
+  }
+
+  const handleRegister = async (name: string, email: string, password: string) => {
+    try {
+      const result = await signUpUser(email, password, name)
+      if (result.user) {
+        await fetchUser()
+        return true
+      }
+      return false
+    } catch (error) {
+      console.error('Register error:', error)
+      return false
+    }
+  }
+
   const isAdmin = user?.profile?.role === 'admin'
   const isStudent = user?.profile?.role === 'student'
+  const isAuthenticated = !!user && !!session
 
   const value = {
     user,
     session,
     loading,
     signOut: handleSignOut,
+    login: handleLogin,
+    register: handleRegister,
+    logout: handleSignOut,
     isAdmin,
     isStudent,
+    isAuthenticated,
     refetchUser: fetchUser
   }
 
