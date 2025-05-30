@@ -1,144 +1,171 @@
 
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { signUpUser } from '@/services/supabase'
-import { Loader2 } from 'lucide-react'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { useAuth } from '@/contexts/AuthContext'
+import { toast } from '@/hooks/use-toast'
+import { Mail, Lock, User, UserPlus } from 'lucide-react'
 
 export function EstudaiaSignupForm() {
-  const [fullName, setFullName] = useState('')
+  const [name, setName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
+  const [isLoading, setIsLoading] = useState(false)
+  const { register } = useAuth()
   const navigate = useNavigate()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
-    setError('')
-
+    
     if (password !== confirmPassword) {
-      setError('As senhas não coincidem')
-      setLoading(false)
+      toast({
+        title: 'Erro na validação',
+        description: 'As senhas não coincidem',
+        variant: 'destructive',
+      })
       return
     }
 
     if (password.length < 6) {
-      setError('A senha deve ter pelo menos 6 caracteres')
-      setLoading(false)
+      toast({
+        title: 'Erro na validação',
+        description: 'A senha deve ter pelo menos 6 caracteres',
+        variant: 'destructive',
+      })
       return
     }
 
+    setIsLoading(true)
+
     try {
-      const { error } = await signUpUser(email, password, fullName)
-      if (error) {
-        setError(error.message)
+      const success = await register(name, email, password)
+      if (success) {
+        toast({
+          title: 'Conta criada com sucesso!',
+          description: 'Bem-vindo ao Estuda.ia',
+        })
+        navigate('/estudaia/student')
       } else {
-        setSuccess(true)
-        setTimeout(() => navigate('/estudaia/login'), 2000)
+        toast({
+          title: 'Erro no cadastro',
+          description: 'Não foi possível criar sua conta. Tente novamente.',
+          variant: 'destructive',
+        })
       }
-    } catch (err) {
-      setError('Erro inesperado. Tente novamente.')
+    } catch (error) {
+      toast({
+        title: 'Erro no cadastro',
+        description: 'Ocorreu um erro inesperado. Tente novamente.',
+        variant: 'destructive',
+      })
     } finally {
-      setLoading(false)
+      setIsLoading(false)
     }
   }
 
-  if (success) {
-    return (
-      <Card className="w-full max-w-md">
-        <CardContent className="pt-6">
-          <Alert>
-            <AlertDescription>
-              Conta criada com sucesso! Verifique seu email para confirmar sua conta.
-              Redirecionando para o login...
-            </AlertDescription>
-          </Alert>
-        </CardContent>
-      </Card>
-    )
-  }
-
   return (
-    <Card className="w-full max-w-md">
-      <CardHeader className="space-y-1">
-        <CardTitle className="text-2xl font-bold">Criar conta no Estuda.ia</CardTitle>
-        <CardDescription>
-          Preencha os dados para criar sua conta
-        </CardDescription>
+    <Card className="w-full max-w-md mx-auto">
+      <CardHeader className="text-center">
+        <CardTitle className="text-2xl">Criar conta no Estuda.ia</CardTitle>
       </CardHeader>
-      <form onSubmit={handleSubmit}>
-        <CardContent className="space-y-4">
-          {error && (
-            <Alert variant="destructive">
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+      <CardContent>
+        <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="fullName">Nome completo</Label>
-            <Input
-              id="fullName"
-              type="text"
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="Seu nome completo"
-              required
-            />
+            <label htmlFor="name" className="text-sm font-medium">
+              Nome completo
+            </label>
+            <div className="relative">
+              <User className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                id="name"
+                type="text"
+                placeholder="Seu nome completo"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="pl-10"
+                required
+              />
+            </div>
           </div>
+
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="seu@email.com"
-              required
-            />
+            <label htmlFor="email" className="text-sm font-medium">
+              Email
+            </label>
+            <div className="relative">
+              <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                id="email"
+                type="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className="pl-10"
+                required
+              />
+            </div>
           </div>
+          
           <div className="space-y-2">
-            <Label htmlFor="password">Senha</Label>
-            <Input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Mínimo 6 caracteres"
-              required
-            />
+            <label htmlFor="password" className="text-sm font-medium">
+              Senha
+            </label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                className="pl-10"
+                required
+                minLength={6}
+              />
+            </div>
           </div>
+
           <div className="space-y-2">
-            <Label htmlFor="confirmPassword">Confirmar senha</Label>
-            <Input
-              id="confirmPassword"
-              type="password"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Confirme sua senha"
-              required
-            />
+            <label htmlFor="confirmPassword" className="text-sm font-medium">
+              Confirmar senha
+            </label>
+            <div className="relative">
+              <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Input
+                id="confirmPassword"
+                type="password"
+                placeholder="••••••••"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="pl-10"
+                required
+                minLength={6}
+              />
+            </div>
           </div>
-        </CardContent>
-        <CardFooter className="flex flex-col space-y-4">
-          <Button type="submit" className="w-full" disabled={loading}>
-            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Criar conta
+
+          <Button type="submit" className="w-full" disabled={isLoading}>
+            {isLoading ? (
+              'Criando conta...'
+            ) : (
+              <>
+                <UserPlus className="h-4 w-4 mr-2" />
+                Criar conta
+              </>
+            )}
           </Button>
-          <p className="text-sm text-muted-foreground">
-            Já tem uma conta?{' '}
-            <Link to="/estudaia/login" className="text-primary hover:underline">
-              Faça login
-            </Link>
-          </p>
-        </CardFooter>
-      </form>
+        </form>
+
+        <div className="mt-4 text-center text-sm">
+          <span className="text-gray-600">Já tem uma conta? </span>
+          <Link to="/estudaia/login" className="text-blue-600 hover:underline">
+            Faça login
+          </Link>
+        </div>
+      </CardContent>
     </Card>
   )
 }
