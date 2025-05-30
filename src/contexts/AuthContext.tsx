@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { supabase, getCurrentEstudaiaUser, signOutUser, signInUser, signUpUser, type EstudaiaUser } from '@/services/supabase'
+import { supabase, getCurrentEstudiaUser, signOutUser, signInUser, signUpUser, type EstudaiaUser } from '@/services/supabase'
 import type { Session } from '@supabase/supabase-js'
 
 interface AuthContextType {
@@ -41,7 +41,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const estudaiaUser = await getCurrentEstudaiaUser()
+      const estudaiaUser = await getCurrentEstudiaUser()
       setUser(estudaiaUser)
     } catch (error) {
       console.error('Error fetching user:', error)
