@@ -1,10 +1,18 @@
-
 import { createClient } from '@supabase/supabase-js'
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey)
+// Validate environment variables
+if (!supabaseUrl || !supabaseAnonKey) {
+  console.error('Missing Supabase environment variables. Please check your configuration.')
+  console.error('Required variables: VITE_SUPABASE_URL, VITE_SUPABASE_ANON_KEY')
+}
+
+// Create a mock client or null if environment variables are missing
+export const supabase = supabaseUrl && supabaseAnonKey 
+  ? createClient(supabaseUrl, supabaseAnonKey)
+  : null
 
 export interface EstudaiaProfile {
   id: string
@@ -37,8 +45,12 @@ export interface Disciplina {
   created_at: string
 }
 
-// Auth functions
+// Auth functions with null checks
 export async function signUpUser(email: string, password: string, fullName: string) {
+  if (!supabase) {
+    throw new Error('Supabase não está configurado. Verifique as variáveis de ambiente.')
+  }
+  
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -54,6 +66,10 @@ export async function signUpUser(email: string, password: string, fullName: stri
 }
 
 export async function signInUser(email: string, password: string) {
+  if (!supabase) {
+    throw new Error('Supabase não está configurado. Verifique as variáveis de ambiente.')
+  }
+  
   const { data, error } = await supabase.auth.signInWithPassword({
     email,
     password
@@ -64,11 +80,20 @@ export async function signInUser(email: string, password: string) {
 }
 
 export async function signOutUser() {
+  if (!supabase) {
+    throw new Error('Supabase não está configurado. Verifique as variáveis de ambiente.')
+  }
+  
   const { error } = await supabase.auth.signOut()
   if (error) throw error
 }
 
 export async function getCurrentEstudiaUser(): Promise<EstudaiaUser | null> {
+  if (!supabase) {
+    console.warn('Supabase não está configurado. Retornando null.')
+    return null
+  }
+  
   const { data: { user } } = await supabase.auth.getUser()
   
   if (!user) return null
@@ -111,8 +136,12 @@ export async function getCurrentEstudiaUser(): Promise<EstudaiaUser | null> {
   }
 }
 
-// Course CRUD functions
+// Course CRUD functions with null checks
 export async function getCourses(): Promise<Course[]> {
+  if (!supabase) {
+    throw new Error('Supabase não está configurado. Verifique as variáveis de ambiente.')
+  }
+  
   const { data, error } = await supabase
     .from('courses')
     .select('*')
@@ -123,6 +152,10 @@ export async function getCourses(): Promise<Course[]> {
 }
 
 export async function createCourse(course: Omit<Course, 'id' | 'created_at'>): Promise<Course> {
+  if (!supabase) {
+    throw new Error('Supabase não está configurado. Verifique as variáveis de ambiente.')
+  }
+  
   const { data, error } = await supabase
     .from('courses')
     .insert(course)
@@ -134,6 +167,10 @@ export async function createCourse(course: Omit<Course, 'id' | 'created_at'>): P
 }
 
 export async function updateCourse(id: string, course: Partial<Omit<Course, 'id' | 'created_at'>>): Promise<Course> {
+  if (!supabase) {
+    throw new Error('Supabase não está configurado. Verifique as variáveis de ambiente.')
+  }
+  
   const { data, error } = await supabase
     .from('courses')
     .update(course)
@@ -146,6 +183,10 @@ export async function updateCourse(id: string, course: Partial<Omit<Course, 'id'
 }
 
 export async function deleteCourse(id: string): Promise<void> {
+  if (!supabase) {
+    throw new Error('Supabase não está configurado. Verifique as variáveis de ambiente.')
+  }
+  
   const { error } = await supabase
     .from('courses')
     .delete()
@@ -154,8 +195,12 @@ export async function deleteCourse(id: string): Promise<void> {
   if (error) throw error
 }
 
-// Disciplina CRUD functions
+// Disciplina CRUD functions with null checks
 export async function getDisciplinas(): Promise<Disciplina[]> {
+  if (!supabase) {
+    throw new Error('Supabase não está configurado. Verifique as variáveis de ambiente.')
+  }
+  
   const { data, error } = await supabase
     .from('disciplinas')
     .select('*')
@@ -166,6 +211,10 @@ export async function getDisciplinas(): Promise<Disciplina[]> {
 }
 
 export async function createDisciplina(disciplina: Omit<Disciplina, 'id' | 'created_at'>): Promise<Disciplina> {
+  if (!supabase) {
+    throw new Error('Supabase não está configurado. Verifique as variáveis de ambiente.')
+  }
+  
   const { data, error } = await supabase
     .from('disciplinas')
     .insert(disciplina)
@@ -177,6 +226,10 @@ export async function createDisciplina(disciplina: Omit<Disciplina, 'id' | 'crea
 }
 
 export async function updateDisciplina(id: string, disciplina: Partial<Omit<Disciplina, 'id' | 'created_at'>>): Promise<Disciplina> {
+  if (!supabase) {
+    throw new Error('Supabase não está configurado. Verifique as variáveis de ambiente.')
+  }
+  
   const { data, error } = await supabase
     .from('disciplinas')
     .update(disciplina)
@@ -189,6 +242,10 @@ export async function updateDisciplina(id: string, disciplina: Partial<Omit<Disc
 }
 
 export async function deleteDisciplina(id: string): Promise<void> {
+  if (!supabase) {
+    throw new Error('Supabase não está configurado. Verifique as variáveis de ambiente.')
+  }
+  
   const { error } = await supabase
     .from('disciplinas')
     .delete()

@@ -1,6 +1,6 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { supabase, getCurrentEstudiaUser, signOutUser, signInUser, signUpUser, type EstudaiaUser } from '@/services/supabase'
+import { supabase, getCurrentEstudaiaUser, signOutUser, signInUser, signUpUser, type EstudaiaUser } from '@/services/supabase'
 import type { Session } from '@supabase/supabase-js'
 
 interface AuthContextType {
@@ -15,6 +15,7 @@ interface AuthContextType {
   isStudent: boolean
   isAuthenticated: boolean
   refetchUser: () => Promise<void>
+  isSupabaseConfigured: boolean
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -31,10 +32,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<EstudaiaUser | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [loading, setLoading] = useState(true)
+  const isSupabaseConfigured = !!supabase
 
   const fetchUser = async () => {
+    if (!isSupabaseConfigured) {
+      setUser(null)
+      return
+    }
+
     try {
-      const estudaiaUser = await getCurrentEstudiaUser()
+      const estudaiaUser = await getCurrentEstudaiaUser()
       setUser(estudaiaUser)
     } catch (error) {
       console.error('Error fetching user:', error)
@@ -43,6 +50,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
+    if (!isSupabaseConfigured) {
+      setLoading(false)
+      return
+    }
+
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
@@ -66,15 +78,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     )
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [isSupabaseConfigured])
 
   const handleSignOut = async () => {
+    if (!isSupabaseConfigured) {
+      throw new Error('Supabase não está configurado')
+    }
+    
     await signOutUser()
     setUser(null)
     setSession(null)
   }
 
   const handleLogin = async (email: string, password: string) => {
+    if (!isSupabaseConfigured) {
+      throw new Error('Supabase não está configurado')
+    }
+
     try {
       const result = await signInUser(email, password)
       if (result.user) {
@@ -89,6 +109,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }
 
   const handleRegister = async (name: string, email: string, password: string) => {
+    if (!isSupabaseConfigured) {
+      throw new Error('Supabase não está configurado')
+    }
+
     try {
       const result = await signUpUser(email, password, name)
       if (result.user) {
@@ -104,7 +128,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const isAdmin = user?.profile?.role === 'admin'
   const isStudent = user?.profile?.role === 'student'
-  const isAuthenticated = !!user && !!session
+  const isAuthenticated = !!user && !!session && isSupabaseConfigured
 
   const value = {
     user,
@@ -117,7 +141,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     isAdmin,
     isStudent,
     isAuthenticated,
-    refetchUser: fetchUser
+    refetchUser: fetchUser,
+    isSupabaseConfigured
   }
 
   return (
